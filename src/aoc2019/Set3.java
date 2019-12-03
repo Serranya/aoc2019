@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -13,7 +14,6 @@ import java.util.Set;
 public class Set3 {
 	public static void main(String[] args) throws IOException {
 		List<String> lines = Files.readAllLines(Paths.get(".", "Set3.txt"));
-
 		Wire w1 = buildWire(lines.get(0));
 		Wire w2 = buildWire(lines.get(1));
 
@@ -31,8 +31,9 @@ public class Set3 {
 //		System.out.println(new Wire(both).toString());
 
 		Iterable<Point> intersections = w1.intersections(w2);
-		intersections.forEach(System.out::println);
+//		intersections.forEach(System.out::println);
 		System.out.println("Smallest mDist: " + smallestManhattenDistance(intersections));
+		System.out.println("Smallest sDist: " + smallestSteps(intersections, w1, w2));
 	}
 
 	private static Wire buildWire(String def) {
@@ -62,6 +63,18 @@ public class Set3 {
 
 	private static int mDistance(Point b) {
 		return Math.abs(b.x) + Math.abs(b.y);
+	}
+
+	private static int smallestSteps(Iterable<Point> intersections, Wire w1, Wire w2) {
+		Point origin = new Point(0, 0);
+		int smallestSteps = Integer.MAX_VALUE;
+		for (Point p : intersections) {
+			if (p.equals(origin)) {
+				continue;
+			}
+			smallestSteps = Math.min(smallestSteps, w1.stepsTo(p) + w2.stepsTo(p));
+		}
+		return smallestSteps;
 	}
 
 	private static class Point {
@@ -166,8 +179,20 @@ public class Set3 {
 			}
 		}
 
-		private int dist() {
+		int dist() {
 			return Integer.parseInt(dir.substring(1));
+		}
+
+		int distTo(Point p) {
+			if (dir.startsWith("U")) {
+				return Math.abs(p.x - orig.x);
+			} else if (dir.startsWith("D")) {
+				return Math.abs(orig.x - p.x);
+			} else if (dir.startsWith("L")) {
+				return Math.abs(p.y - orig.y);
+			} else {
+				return Math.abs(orig.y - p.y);
+			}
 		}
 
 		@Override
@@ -177,7 +202,7 @@ public class Set3 {
 	}
 
 	private static class Wire {
-		Set<Edge> edges = new HashSet<>();
+		Set<Edge> edges = new LinkedHashSet<>();
 
 		Wire(Iterable<Edge> edges) {
 			edges.forEach(this.edges::add);
@@ -197,6 +222,19 @@ public class Set3 {
 				e.intersections(other).forEach(intersections::add);
 			}
 			return intersections;
+		}
+
+		int stepsTo(Point p) {
+			int ret = 0;
+			for (Edge e : edges) {
+				if (!e.intersects(p)) {
+					ret += e.dist();
+				} else {
+					ret += e.distTo(p);
+					break;
+				}
+			}
+			return ret;
 		}
 
 		@Override
