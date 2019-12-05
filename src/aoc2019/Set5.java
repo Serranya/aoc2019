@@ -12,8 +12,7 @@ public class Set5 {
 			.map(String::trim)
 			.mapToInt(Integer::parseInt)
 			.toArray();
-//		int[] memory = {1002,4,3,4,33};
-		System.out.println(new Computer(memory, () -> 1).run());
+		new Computer(memory, () -> 5).run();
 	}
 
 	private static class Computer {
@@ -29,6 +28,10 @@ public class Set5 {
 			instructions[2] = new MulInstruction();
 			instructions[3] = new SaveInstruction();
 			instructions[4] = new WriteInstruction();
+			instructions[5] = new JumpIfTrueInstruction();
+			instructions[6] = new JumpIfFalseInstruction();
+			instructions[7] = new LessThanInstruction();
+			instructions[8] = new EqualInstruction();
 			instructions[99] = new HaltInstruction();
 		}
 
@@ -38,7 +41,11 @@ public class Set5 {
 				int opId = opCode.id();
 				Instruction instruction = instructions[opId];
 				Result result = instruction.exec(ip, memory, opCode, input);
-				ip += instruction.size();
+				if (result == Result.JUMP) {
+					ip = instruction.jumpTarget();
+				} else {
+					ip += instruction.size();
+				}
 				if (result == Result.HALT) {
 					break;
 				}
@@ -72,12 +79,13 @@ public class Set5 {
 	}
 
 	enum Result {
-		CONTINUE, HALT;
+		CONTINUE, HALT, JUMP;
 	}
 
 	interface Instruction {
 		Result exec(int ip, int[] memory, OpCode opCode, IntSupplier input);
 		int size();
+		default int jumpTarget() {throw new UnsupportedOperationException("Not implemented");}
 	}
 
 	private static class AddInstruction implements Instruction {
@@ -163,6 +171,114 @@ public class Set5 {
 		@Override
 		public int size() {
 			return 2;
+		}
+	}
+
+	private static class JumpIfTrueInstruction implements Instruction {
+		private int target = -1;
+		@Override
+		public Result exec(int ip, int[] memory, OpCode opCode, IntSupplier input) {
+			int paramA = memory[ip + 1];
+			if (opCode.modeFor(0) == ParameterMode.POSITiON) {
+				paramA = memory[paramA];
+			}
+
+			if (paramA != 0) {
+				int paramB = memory[ip + 2];
+				if (opCode.modeFor(1) == ParameterMode.POSITiON) {
+					paramB = memory[paramB];
+				}
+				target = paramB;
+				return Result.JUMP;
+			}
+			return Result.CONTINUE;
+		}
+
+		@Override
+		public int size() {
+			return 3;
+		}
+
+		@Override
+		public int jumpTarget() {
+			return target;
+		}
+	}
+
+	private static class JumpIfFalseInstruction implements Instruction {
+		private int target = -1;
+		@Override
+		public Result exec(int ip, int[] memory, OpCode opCode, IntSupplier input) {
+			int paramA = memory[ip + 1];
+			if (opCode.modeFor(0) == ParameterMode.POSITiON) {
+				paramA = memory[paramA];
+			}
+
+			if (paramA == 0) {
+				int paramB = memory[ip + 2];
+				if (opCode.modeFor(1) == ParameterMode.POSITiON) {
+					paramB = memory[paramB];
+				}
+				target = paramB;
+				return Result.JUMP;
+			}
+			return Result.CONTINUE;
+		}
+
+		@Override
+		public int size() {
+			return 3;
+		}
+
+		@Override
+		public int jumpTarget() {
+			return target;
+		}
+	}
+
+	private static class LessThanInstruction implements Instruction {
+		@Override
+		public Result exec(int ip, int[] memory, OpCode opCode, IntSupplier input) {
+			int paramA = memory[ip + 1];
+			int paramB = memory[ip + 2];
+			int paramC = memory[ip + 3];
+			if (opCode.modeFor(0) == ParameterMode.POSITiON) {
+				paramA = memory[paramA];
+			}
+			if (opCode.modeFor(1) == ParameterMode.POSITiON) {
+				paramB = memory[paramB];
+			}
+
+			memory[paramC] = paramA < paramB ? 1 : 0;
+			return Result.CONTINUE;
+		}
+
+		@Override
+		public int size() {
+			return 4;
+		}
+	}
+
+	private static class EqualInstruction implements Instruction {
+		@Override
+		public Result exec(int ip, int[] memory, OpCode opCode, IntSupplier input) {
+			int paramA = memory[ip + 1];
+			int paramB = memory[ip + 2];
+			int paramC = memory[ip + 3];
+			if (opCode.modeFor(0) == ParameterMode.POSITiON) {
+				paramA = memory[paramA];
+			}
+			if (opCode.modeFor(1) == ParameterMode.POSITiON) {
+				paramB = memory[paramB];
+			}
+
+			memory[paramC] = paramA == paramB ? 1 : 0;
+			return Result.CONTINUE;
+		}
+
+		@Override
+		public int size() {
+			return 4;
 		}
 	}
 }
